@@ -16,7 +16,7 @@ class BitmapEditApp:
         root.rowconfigure(0, weight=1)
 
         self.font_data = bytearray(8)
-        self.bitmap = MonoVlsb(self.font_data, 8, 8)
+        self.bitmap = MonoVlsb(memoryview(self.font_data), 8, 8)
         self.bme = BitmapEdit(mainframe, self.bitmap, 20)
         self.bme.grid(row=1, column=1)
 
@@ -31,7 +31,7 @@ class BitmapEditApp:
             child.grid_configure(padx=5, pady=5)
 
     def update(self):
-        self.bitmap.set_bitmap_data(self.font_data[self.index:self.index + self.bitmap.size])
+        self.bitmap.set_bitmap_data(memoryview(self.font_data)[self.index:self.index + self.bitmap.size])
         self.bme.set_bitmap(self.bitmap)
         self.label_text.set("Index: " + str(self.index // self.bitmap.size) +
                             "   Count: " + str(len(self.font_data) // self.bitmap.size))
@@ -48,6 +48,7 @@ class BitmapEditApp:
 
     def file_open(self):
         filename = tk.filedialog.askopenfilename()
+        # print(filename)
         file = open(filename, "r")
         lines = file.readlines()
         file.close()
@@ -77,7 +78,7 @@ class BitmapEditApp:
                     print('Parse error:', values)
         # print(self.font_data.hex(' '))
         print('W:', width, 'H:', height)
-        self.bitmap = MonoVlsb(self.font_data, width, height)
+        self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
         self.index = 0
         self.update()
 

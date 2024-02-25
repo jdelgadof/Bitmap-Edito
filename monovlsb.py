@@ -4,14 +4,10 @@ class MonoVlsb:
         self.height = height
         self.stride = stride if stride >= width else width
         self.size = self.stride * (height // 8 + (1 if height % 8 != 0 else 0))
-        self.data = bytearray(data)
-        if len(self.data) < self.size:
-            self.data.extend(bytearray(self.size - len(self.data)))
+        self.data = data
 
     def set_bitmap_data(self, data):
-        self.data = bytearray(data)
-        if len(self.data) < self.size:
-            self.data.extend(bytearray(self.size - len(self.data)))
+        self.data = data
 
     def set_pixel(self, x, y, color):
         index = (y >> 3) * self.stride + x
