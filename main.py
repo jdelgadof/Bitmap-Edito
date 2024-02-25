@@ -19,6 +19,7 @@ class BitmapEditApp:
         self.bitmap = MonoVlsb(memoryview(self.font_data), 8, 8)
         self.bme = BitmapEdit(mainframe, self.bitmap, 20)
         self.bme.grid(row=1, column=1)
+        self.filename = None
 
         self.label_text = tk.StringVar(value="Index: " + str(self.index))
         self.label = ttk.Label(mainframe, textvariable=self.label_text)
@@ -47,9 +48,9 @@ class BitmapEditApp:
             self.update()
 
     def file_open(self):
-        filename = tk.filedialog.askopenfilename()
+        self.filename = tk.filedialog.askopenfilename()
         # print(filename)
-        file = open(filename, "r")
+        file = open(self.filename, "r")
         lines = file.readlines()
         file.close()
         output = False
@@ -112,6 +113,42 @@ class BitmapEditApp:
         button = ttk.Button(mainframe, text="Ok", command=lambda: self.close_win(w_entry, h_entry, s_entry))
         button.grid(row=1, column=2)
 
+    def save(self):
+        prefix = ''
+        postfix = ''
+        if self.filename is None:
+            prefix = 'const unsigned char binary_data[] = {\n'
+            postfix = '};\n'
+            self.filename = 'default_monovlsb.h'
+        else:
+            file = open(self.filename, "r")
+            lines = file.readlines()
+            file.close()
+            for l in lines:
+                if l.find('// font edit begin') >= 0:
+                    break
+                prefix += l
+            append = False
+            for l in lines:
+                if append:
+                    postfix += l
+                if l.find('// font edit end') >= 0:
+                    append = True
+
+        with open(self.filename, 'w', encoding='ISO8859-1') as f:
+            f.write(prefix)
+            f.write('// font edit begin : monovlsb : ')
+            f.write(str(self.bitmap.width) + ' : ' + str(self.bitmap.height))
+
+            for i in range(len(self.font_data) - 1):
+                if i % 8 == 0:
+                    f.write('\n    ')
+                f.write("0x%0.2X" % self.font_data[i] + ', ')
+            f.write("0x%0.2X" % self.font_data[-1])
+            f.write('\n')
+
+            f.write('// font edit end\n')
+            f.write(postfix)
 
 def donothing():
     pass
@@ -127,7 +164,7 @@ def run():
     filemenu = tk.Menu(menubar, tearoff=0)
     filemenu.add_command(label="New", command=bme.popupwin)
     filemenu.add_command(label="Open", command=bme.file_open)
-    filemenu.add_command(label="Save", command=donothing)
+    filemenu.add_command(label="Save", command=bme.save)
     filemenu.add_separator()
     filemenu.add_command(label="Exit", command=root.quit)
     menubar.add_cascade(label="File", menu=filemenu)
