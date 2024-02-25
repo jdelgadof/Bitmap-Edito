@@ -29,6 +29,10 @@ class BitmapEdit(ttk.Frame):
         if bmp.width != self.width or bmp.height != self.height:
             self.width = bmp.width
             self.height = bmp.height
+            if self.height > 32 or self.width > 32:
+                self.px = 10
+            else:
+                self.px = 20
             self.canvas.destroy()
             self.create_grid()
         self.bmp = bmp
