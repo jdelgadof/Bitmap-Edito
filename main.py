@@ -1,5 +1,8 @@
+import os.path
 import tkinter as tk
 from tkinter import ttk, filedialog
+
+import PIL.Image
 
 from bitmapedit import BitmapEdit
 from monovlsb import MonoVlsb
@@ -49,7 +52,25 @@ class BitmapEditApp:
 
     def file_open(self):
         self.filename = tk.filedialog.askopenfilename()
-        # print(filename)
+        print(os.path.splitext(self.filename), os.path.basename(self.filename))
+        if os.path.splitext(self.filename)[1] == '.png':
+            image = PIL.Image.open(self.filename).convert('1')
+            self.bitmap = MonoVlsb(memoryview(self.font_data), image.width, image.height)
+            self.font_data = bytearray(self.bitmap.size)
+            self.bitmap.set_bitmap_data(memoryview(self.font_data))
+            for x in range(image.width):
+                for y in range(image.height):
+                    px = image.getpixel((x,y))
+                    # print(px)
+                    if px < 127:
+                        self.bitmap.set_pixel(x, y, 1)
+            self.index = 0
+            self.update()
+            image.close()
+            self.filename = os.path.basename(os.path.splitext(self.filename)[0]) + '.h'
+            print(self.filename)
+            self.filename = None # kludge until creating a new file with non-default name is fixed
+            return
         file = open(self.filename, "r")
         lines = file.readlines()
         file.close()
@@ -98,20 +119,24 @@ class BitmapEditApp:
         self.popup.columnconfigure(0, weight=1)
         self.popup.rowconfigure(0, weight=1)
 
+        ttk.Label(mainframe, text='Width').grid(row=0, column=0, sticky="WE")
+        ttk.Label(mainframe, text='Height').grid(row=0, column=1, sticky="WE")
+        ttk.Label(mainframe, text='Stride').grid(row=0, column=2, sticky="WE")
+
         w_entry = ttk.Entry(mainframe, width=10)
-        w_entry.grid(row=0, column=0)
+        w_entry.grid(row=1, column=0)
 
         h_entry = ttk.Entry(mainframe, width=10)
-        h_entry.grid(row=0, column=1)
+        h_entry.grid(row=1, column=1)
 
         s_entry = ttk.Entry(mainframe, width=10)
-        s_entry.grid(row=0, column=2)
+        s_entry.grid(row=1, column=2)
 
         # Create a Button to print something in the Entry widget
-        ttk.Button(mainframe, text="Cancel").grid(row=1, column=1)
+        ttk.Button(mainframe, text="Cancel", command=self.popup.destroy).grid(row=2, column=1)
         # Create a Button Widget in the Toplevel Window
         button = ttk.Button(mainframe, text="Ok", command=lambda: self.close_win(w_entry, h_entry, s_entry))
-        button.grid(row=1, column=2)
+        button.grid(row=2, column=2)
 
     def save(self):
         prefix = ''
@@ -157,6 +182,7 @@ def donothing():
 def run():
     root = tk.Tk()
     root.title("Bitmap/font editor")
+    print(root.winfo_screenwidth(), root.winfo_screenheight())
 
     bme = BitmapEditApp(root)
 
