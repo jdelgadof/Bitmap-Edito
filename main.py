@@ -53,7 +53,8 @@ class BitmapEditApp:
     def file_open(self):
         self.filename = tk.filedialog.askopenfilename()
         print(os.path.splitext(self.filename), os.path.basename(self.filename))
-        if os.path.splitext(self.filename)[1] == '.png':
+        extension = os.path.splitext(self.filename)[1]
+        if extension == '.png' or extension == '.bmp':
             image = PIL.Image.open(self.filename).convert('1')
             self.bitmap = MonoVlsb(memoryview(self.font_data), image.width, image.height)
             self.font_data = bytearray(self.bitmap.size)
@@ -107,6 +108,18 @@ class BitmapEditApp:
     # Define a function to close the popup window
     def close_win(self, w_entry, h_entry, s_entry):
         print(w_entry.get(), h_entry.get(), s_entry.get())
+        try:
+            width = int(w_entry.get())
+            height = int(h_entry.get())
+            stride = int(s_entry.get())
+            print("Values:",width, height, stride)
+            self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
+            self.font_data = bytearray(self.bitmap.size)
+            self.bitmap.set_bitmap_data(memoryview(self.font_data))
+            self.index = 0
+            self.update()
+        except:
+            print('Incorrect arguments')
         self.popup.destroy()
 
     # Define a function to open the Popup Dialogue
