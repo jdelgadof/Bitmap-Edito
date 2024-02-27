@@ -2,7 +2,13 @@ import os.path
 import tkinter as tk
 from tkinter import ttk, filedialog
 
-import PIL.Image
+PIL_is_installed = True
+
+try:
+    import PIL.Image
+except ModuleNotFoundError:
+    PIL_is_installed = False
+    print('You must have Pillow installed to open .png or .bmp files')
 
 from bitmapedit import BitmapEdit
 from monovlsb import MonoVlsb
@@ -55,6 +61,10 @@ class BitmapEditApp:
         print(os.path.splitext(self.filename), os.path.basename(self.filename))
         extension = os.path.splitext(self.filename)[1]
         if extension == '.png' or extension == '.bmp':
+            if not PIL_is_installed:
+                tk.messagebox.showwarning(title='PILLOW not installed',
+                                          message='You need to install Pillow to open bitmap files.')
+                return
             image = PIL.Image.open(self.filename).convert('1')
             self.bitmap = MonoVlsb(memoryview(self.font_data), image.width, image.height)
             self.font_data = bytearray(self.bitmap.size)
@@ -188,6 +198,9 @@ class BitmapEditApp:
             f.write('// font edit end\n')
             f.write(postfix)
 
+    def append(self):
+        pass
+
 def donothing():
     pass
 
@@ -203,6 +216,7 @@ def run():
     filemenu = tk.Menu(menubar, tearoff=0)
     filemenu.add_command(label="New", command=bme.popupwin)
     filemenu.add_command(label="Open", command=bme.file_open)
+    filemenu.add_command(label="Append", command=bme.append)
     filemenu.add_command(label="Save", command=bme.save)
     filemenu.add_separator()
     filemenu.add_command(label="Exit", command=root.quit)
