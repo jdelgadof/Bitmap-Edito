@@ -58,32 +58,23 @@ class BitmapEditApp:
             self.update()
 
     def file_open(self):
-        self.filename = tk.filedialog.askopenfilename()
-        print(os.path.splitext(self.filename), os.path.basename(self.filename))
-        extension = os.path.splitext(self.filename)[1]
+        filename = tk.filedialog.askopenfilename()
+        print(os.path.splitext(filename), os.path.basename(filename))
+        extension = os.path.splitext(filename)[1]
         if extension == '.png' or extension == '.bmp':
             if not PIL_is_installed:
                 tk.messagebox.showwarning(title='PILLOW not installed',
                                           message='You need to install Pillow to open bitmap files.')
                 return
-            image = PIL.Image.open(self.filename).convert('1')
-            self.bitmap = MonoVlsb(memoryview(self.font_data), image.width, image.height)
-            self.font_data = bytearray(self.bitmap.size)
-            self.bitmap.set_bitmap_data(memoryview(self.font_data))
-            for x in range(image.width):
-                for y in range(image.height):
-                    px = image.getpixel((x,y))
-                    # print(px)
-                    if px < 127:
-                        self.bitmap.set_pixel(x, y, 1)
-            self.index = 0
-            self.update()
-            image.close()
-            self.filename = os.path.basename(os.path.splitext(self.filename)[0]) + '.h'
-            print(self.filename)
+            self.read_bitmap_file(filename)
             self.filename = None # kludge until creating a new file with non-default name is fixed
-            return
-        file = open(self.filename, "r")
+        else:
+            self.read_source_file(filename)
+        self.index = 0
+        self.update()
+
+    def read_source_file(self, filename):
+        file = open(filename, "r")
         lines = file.readlines()
         file.close()
         output = False
@@ -113,8 +104,21 @@ class BitmapEditApp:
         # print(self.font_data.hex(' '))
         print('W:', width, 'H:', height)
         self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
-        self.index = 0
-        self.update()
+        self.filename = filename
+
+    def read_bitmap_file(self, filename):
+        image = PIL.Image.open(filename).convert('1')
+        self.font_data = bytearray(MonoVlsb.size(image.width, image.height))
+        self.bitmap = MonoVlsb(memoryview(self.font_data), image.width, image.height)
+        for x in range(image.width):
+            for y in range(image.height):
+                px = image.getpixel((x, y))
+                # print(px)
+                if px < 127:
+                    self.bitmap.set_pixel(x, y, 1)
+        image.close()
+        self.filename = os.path.basename(os.path.splitext(filename)[0]) + '.h'
+        print(self.filename)
 
     # Define a function to close the popup window
     def close_win(self, w_entry, h_entry, s_entry):
