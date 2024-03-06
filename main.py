@@ -166,27 +166,27 @@ class BitmapEditApp:
         postfix = ''
         if self.filename is None:
             prefix = 'const unsigned char binary_data[] = {\n'
-            postfix = '};\n'
+            prefix +='// font edit begin : monovlsb : ' +self.bitmap.width + ' : ' + str(self.bitmap.height)
+            postfix = '// font edit end\n};\n'
             self.filename = 'default_monovlsb.h'
         else:
             file = open(self.filename, "r")
             lines = file.readlines()
             file.close()
             for l in lines:
+                prefix += l
                 if l.find('// font edit begin') >= 0:
                     break
-                prefix += l
             append = False
             for l in lines:
-                if append:
-                    postfix += l
                 if l.find('// font edit end') >= 0:
                     append = True
+                if append:
+                    postfix += l
+            prefix = prefix.strip() # output will add line feed so strip white space from the end
 
         with open(self.filename, 'w', encoding='ISO8859-1') as f:
             f.write(prefix)
-            f.write('// font edit begin : monovlsb : ')
-            f.write(str(self.bitmap.width) + ' : ' + str(self.bitmap.height))
 
             for i in range(len(self.font_data) - 1):
                 if i % 8 == 0:
@@ -195,7 +195,6 @@ class BitmapEditApp:
             f.write("0x%0.2X" % self.font_data[-1])
             f.write('\n')
 
-            f.write('// font edit end\n')
             f.write(postfix)
 
     def append(self):
