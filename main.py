@@ -25,7 +25,7 @@ class BitmapEditApp:
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
 
-        self.font_data = bytearray(8)
+        self.font_data = bytearray(MonoVlsb.size(8,8))
         self.bitmap = MonoVlsb(memoryview(self.font_data), 8, 8)
         self.bme = BitmapEdit(mainframe, self.bitmap, 20)
         self.bme.grid(row=1, column=1)
@@ -66,21 +66,24 @@ class BitmapEditApp:
                 tk.messagebox.showwarning(title='PILLOW not installed',
                                           message='You need to install Pillow to open bitmap files.')
                 return
-            self.read_bitmap_file(filename)
+            data, width, height = self.read_bitmap_file(filename)
+            # self.filename = os.path.basename(os.path.splitext(filename)[0]) + '.h'
             self.filename = None # kludge until creating a new file with non-default name is fixed
         else:
-            self.read_source_file(filename)
+            data, width, height = self.read_source_file(filename)
+            self.filename = filename
+        self.font_data = data
+        self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
         self.index = 0
         self.update()
 
     def read_source_file(self, filename):
-        file = open(filename, "r")
-        lines = file.readlines()
-        file.close()
+        with open(filename, "r") as file:
+            lines = file.readlines()
         output = False
         width = 8
         height = 8
-        self.font_data = bytearray()
+        data = bytearray()
         for line in lines:
             # remove whitespace
             line = line.strip()
@@ -92,7 +95,7 @@ class BitmapEditApp:
                 # print(text)
                 ba = bytearray.fromhex(text.replace('0x', '').replace(',', ''))
                 # print(text, ba.hex())
-                self.font_data.extend(ba)
+                data.extend(ba)
             if line.find('// font edit begin') >= 0:
                 values = line.split(':')
                 try:
@@ -101,30 +104,27 @@ class BitmapEditApp:
                     output = True
                 except:
                     print('Parse error:', values)
-        # print(self.font_data.hex(' '))
-        byte_count = MonoVlsb.size(width, height)
-        if len(self.font_data) % byte_count != 0:
-            missing = ((len(self.font_data) // byte_count) + 1) * byte_count - len(self.font_data)
-            self.font_data.extend(bytearray(missing))
-            print("Added", missing, "bytes to align buffer size")
-
+        # print(data.hex(' '))
         print('W:', width, 'H:', height)
-        self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
-        self.filename = filename
+        byte_count = MonoVlsb.size(width, height)
+        if len(data) % byte_count != 0:
+            missing = ((len(data) // byte_count) + 1) * byte_count - len(data)
+            data.extend(bytearray(missing))
+            print("Added", missing, "bytes to align buffer size")
+        return data, width, height
 
     def read_bitmap_file(self, filename):
         image = PIL.Image.open(filename).convert('1')
-        self.font_data = bytearray(MonoVlsb.size(image.width, image.height))
-        self.bitmap = MonoVlsb(memoryview(self.font_data), image.width, image.height)
+        data = bytearray(MonoVlsb.size(image.width, image.height))
+        bitmap = MonoVlsb(memoryview(data), image.width, image.height)
         for x in range(image.width):
             for y in range(image.height):
                 px = image.getpixel((x, y))
                 # print(px)
                 if px < 127:
-                    self.bitmap.set_pixel(x, y, 1)
+                    bitmap.set_pixel(x, y, 1)
         image.close()
-        self.filename = os.path.basename(os.path.splitext(filename)[0]) + '.h'
-        print(self.filename)
+        return data, bitmap.width, bitmap.height
 
     # Define a function to close the popup window
     def close_new_image_popup(self, w_entry, h_entry, s_entry):
@@ -183,9 +183,8 @@ class BitmapEditApp:
             postfix = '// font edit end\n};\n'
             self.filename = 'default_monovlsb.h'
         else:
-            file = open(self.filename, "r")
-            lines = file.readlines()
-            file.close()
+            with open(self.filename, "r") as file:
+                lines = file.readlines()
             for l in lines:
                 prefix += l
                 if l.find('// font edit begin') >= 0:
