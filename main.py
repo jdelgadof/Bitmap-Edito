@@ -9,6 +9,7 @@ try:
 except ModuleNotFoundError:
     PIL_is_installed = False
     print('You must have Pillow installed to open .png or .bmp files')
+    print('To install:  pip install pillow')
 
 from bitmapedit import BitmapEdit
 from monovlsb import MonoVlsb
