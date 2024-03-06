@@ -45,7 +45,9 @@ class BitmapEditApp:
         self.bitmap.set_bitmap_data(memoryview(self.font_data)[self.index:self.index + self.bitmap.size])
         self.bme.set_bitmap(self.bitmap)
         self.label_text.set("Index: " + str(self.index // self.bitmap.size) +
-                            "   Count: " + str(len(self.font_data) // self.bitmap.size))
+                            "   Count: " + str(len(self.font_data) // self.bitmap.size) +
+                            "   Width: " + str(self.bitmap.width) +
+                            "   Height: " + str(self.bitmap.height))
 
     def inc(self):
         if self.index < len(self.font_data) - self.bitmap.size:
@@ -58,6 +60,15 @@ class BitmapEditApp:
             self.update()
 
     def file_open(self):
+        data, height, width, filename = self.read_data_from_file()
+        if data is not None:
+            self.font_data = data
+            self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
+            self.filename = filename
+            self.index = 0
+            self.update()
+
+    def read_data_from_file(self):
         filename = tk.filedialog.askopenfilename()
         print(os.path.splitext(filename), os.path.basename(filename))
         extension = os.path.splitext(filename)[1]
@@ -65,17 +76,15 @@ class BitmapEditApp:
             if not PIL_is_installed:
                 tk.messagebox.showwarning(title='PILLOW not installed',
                                           message='You need to install Pillow to open bitmap files.')
-                return
-            data, width, height = self.read_bitmap_file(filename)
-            # self.filename = os.path.basename(os.path.splitext(filename)[0]) + '.h'
-            self.filename = None # kludge until creating a new file with non-default name is fixed
+                data, width, height = (None, 0, 0)
+            else:
+                data, width, height = self.read_bitmap_file(filename)
+            # filename = os.path.basename(os.path.splitext(filename)[0]) + '.h'
+            filename = None  # kludge until creating a new file with non-default name is fixed
         else:
             data, width, height = self.read_source_file(filename)
-            self.filename = filename
-        self.font_data = data
-        self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
-        self.index = 0
-        self.update()
+
+        return data, height, width, filename
 
     def read_source_file(self, filename):
         with open(filename, "r") as file:
@@ -210,7 +219,16 @@ class BitmapEditApp:
             f.write(postfix)
 
     def append(self):
-        pass
+        data, height, width, filename = self.read_data_from_file()
+        if data is not None and height == self.bitmap.height and width == self.bitmap.width:
+            self.bitmap.set_bitmap_data(None) # remove export of current data
+            self.font_data.extend(data) # extend data
+            self.index = 0
+            self.update() # update will re-export the data
+        else:
+            tk.messagebox.showwarning(title='Incorrect image size',
+                                      message="Selected image dimensions don't match the current image.")
+
 
 def donothing():
     pass
