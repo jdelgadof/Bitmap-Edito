@@ -102,6 +102,12 @@ class BitmapEditApp:
                 except:
                     print('Parse error:', values)
         # print(self.font_data.hex(' '))
+        byte_count = MonoVlsb.size(width, height)
+        if len(self.font_data) % byte_count != 0:
+            missing = ((len(self.font_data) // byte_count) + 1) * byte_count - len(self.font_data)
+            self.font_data.extend(bytearray(missing))
+            print("Added", missing, "bytes to align buffer size")
+
         print('W:', width, 'H:', height)
         self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
         self.filename = filename
