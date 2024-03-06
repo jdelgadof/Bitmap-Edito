@@ -121,16 +121,15 @@ class BitmapEditApp:
         print(self.filename)
 
     # Define a function to close the popup window
-    def close_win(self, w_entry, h_entry, s_entry):
+    def close_new_image_popup(self, w_entry, h_entry, s_entry):
         print(w_entry.get(), h_entry.get(), s_entry.get())
         try:
             width = int(w_entry.get())
             height = int(h_entry.get())
             stride = int(s_entry.get())
             print("Values:",width, height, stride)
+            self.font_data = bytearray(MonoVlsb.size(width, height, stride))
             self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
-            self.font_data = bytearray(self.bitmap.size)
-            self.bitmap.set_bitmap_data(memoryview(self.font_data))
             self.index = 0
             self.update()
         except:
@@ -138,7 +137,7 @@ class BitmapEditApp:
         self.popup.destroy()
 
     # Define a function to open the Popup Dialogue
-    def popupwin(self):
+    def new_image_popup(self):
         # Create a Toplevel window
         self.popup = tk.Toplevel(self.root)
 
@@ -153,17 +152,20 @@ class BitmapEditApp:
 
         w_entry = ttk.Entry(mainframe, width=10)
         w_entry.grid(row=1, column=0)
+        w_entry.insert(0, "16")
 
         h_entry = ttk.Entry(mainframe, width=10)
         h_entry.grid(row=1, column=1)
+        h_entry.insert(0, "16")
 
         s_entry = ttk.Entry(mainframe, width=10)
         s_entry.grid(row=1, column=2)
+        s_entry.insert(0,"0")
 
         # Create a Button to print something in the Entry widget
         ttk.Button(mainframe, text="Cancel", command=self.popup.destroy).grid(row=2, column=1)
         # Create a Button Widget in the Toplevel Window
-        button = ttk.Button(mainframe, text="Ok", command=lambda: self.close_win(w_entry, h_entry, s_entry))
+        button = ttk.Button(mainframe, text="Ok", command=lambda: self.close_new_image_popup(w_entry, h_entry, s_entry))
         button.grid(row=2, column=2)
 
     def save(self):
@@ -218,7 +220,7 @@ def run():
 
     menubar = tk.Menu(root)
     filemenu = tk.Menu(menubar, tearoff=0)
-    filemenu.add_command(label="New", command=bme.popupwin)
+    filemenu.add_command(label="New", command=bme.new_image_popup)
     filemenu.add_command(label="Open", command=bme.file_open)
     filemenu.add_command(label="Append", command=bme.append)
     filemenu.add_command(label="Save", command=bme.save)
