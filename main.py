@@ -1,6 +1,8 @@
 import os.path
 import tkinter as tk
 from tkinter import ttk, filedialog
+from bitmapedit import BitmapEdit
+from monovlsb import MonoVlsb
 
 PIL_is_installed = True
 
@@ -10,9 +12,6 @@ except ModuleNotFoundError:
     PIL_is_installed = False
     print('You must have Pillow installed to open .png or .bmp files')
     print('To install:  pip install pillow')
-
-from bitmapedit import BitmapEdit
-from monovlsb import MonoVlsb
 
 
 class BitmapEditApp:
@@ -25,7 +24,7 @@ class BitmapEditApp:
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
 
-        self.font_data = bytearray(MonoVlsb.size(8,8))
+        self.font_data = bytearray(MonoVlsb.size(8, 8))
         self.bitmap = MonoVlsb(memoryview(self.font_data), 8, 8)
         self.bme = BitmapEdit(mainframe, self.bitmap, 20)
         self.bme.grid(row=1, column=1)
@@ -80,6 +79,7 @@ class BitmapEditApp:
             else:
                 data, width, height = self.read_bitmap_file(filename)
             # filename = os.path.basename(os.path.splitext(filename)[0]) + '.h'
+            # filename = os.path.splitext(filename)[0] + '.h'
             filename = None  # kludge until creating a new file with non-default name is fixed
         else:
             data, width, height = self.read_source_file(filename)
@@ -111,7 +111,7 @@ class BitmapEditApp:
                     width = int(values[2])
                     height = int(values[3])
                     output = True
-                except:
+                except ValueError:
                     print('Parse error:', values)
         # print(data.hex(' '))
         print('W:', width, 'H:', height)
@@ -142,12 +142,12 @@ class BitmapEditApp:
             width = int(w_entry.get())
             height = int(h_entry.get())
             stride = int(s_entry.get())
-            print("Values:",width, height, stride)
+            print("Values:", width, height, stride)
             self.font_data = bytearray(MonoVlsb.size(width, height, stride))
             self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
             self.index = 0
             self.update()
-        except:
+        except ValueError:
             print('Incorrect arguments')
         self.popup.destroy()
 
@@ -175,7 +175,7 @@ class BitmapEditApp:
 
         s_entry = ttk.Entry(mainframe, width=10)
         s_entry.grid(row=1, column=2)
-        s_entry.insert(0,"0")
+        s_entry.insert(0, "0")
 
         # Create a Button to print something in the Entry widget
         ttk.Button(mainframe, text="Cancel", command=self.popup.destroy).grid(row=2, column=1)
@@ -188,23 +188,23 @@ class BitmapEditApp:
         postfix = ''
         if self.filename is None:
             prefix = 'const unsigned char binary_data[] = {\n'
-            prefix +='// font edit begin : monovlsb : ' +self.bitmap.width + ' : ' + str(self.bitmap.height)
+            prefix += '// font edit begin : monovlsb : ' + self.bitmap.width + ' : ' + str(self.bitmap.height)
             postfix = '// font edit end\n};\n'
             self.filename = 'default_monovlsb.h'
         else:
             with open(self.filename, "r") as file:
                 lines = file.readlines()
-            for l in lines:
-                prefix += l
-                if l.find('// font edit begin') >= 0:
+            for line in lines:
+                prefix += line
+                if line.find('// font edit begin') >= 0:
                     break
             append = False
-            for l in lines:
-                if l.find('// font edit end') >= 0:
+            for line in lines:
+                if line.find('// font edit end') >= 0:
                     append = True
                 if append:
-                    postfix += l
-            prefix = prefix.strip() # output will add line feed so strip white space from the end
+                    postfix += line
+            prefix = prefix.strip()  # output will add line feed so strip white space from the end
 
         with open(self.filename, 'w', encoding='ISO8859-1') as f:
             f.write(prefix)
@@ -221,10 +221,10 @@ class BitmapEditApp:
     def append(self):
         data, height, width, filename = self.read_data_from_file()
         if data is not None and height == self.bitmap.height and width == self.bitmap.width:
-            self.bitmap.set_bitmap_data(None) # remove export of current data
-            self.font_data.extend(data) # extend data
+            self.bitmap.set_bitmap_data(None)  # remove export of current data
+            self.font_data.extend(data)  # extend data
             self.index = 0
-            self.update() # update will re-export the data
+            self.update()  # update will re-export the data
         else:
             tk.messagebox.showwarning(title='Incorrect image size',
                                       message="Selected image dimensions don't match the current image.")
