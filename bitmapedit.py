@@ -24,6 +24,7 @@ class BitmapEdit(ttk.Frame):
                       for c in range(self.width)] for r in range(self.height)]
         self.canvas.pack()
         self.canvas.bind("<Button-1>", self.click)
+        self.canvas.bind("<B1-Motion>", self.drag)
 
     def set_bitmap(self, bmp):
         if bmp.width != self.width or bmp.height != self.height:
@@ -51,7 +52,7 @@ class BitmapEdit(ttk.Frame):
         self.update(x, y)
 
     def toggle_pixel(self, x, y):
-        self.set_pixel(x, y, not self.bmp.get_pixel(x,y))
+        self.set_pixel(x, y, not self.bmp.get_pixel(x, y))
 
     def click(self, event):
         c = event.x // self.px
@@ -61,3 +62,13 @@ class BitmapEdit(ttk.Frame):
         if r > self.height - 1:
             r = self.height - 1
         self.toggle_pixel(c, r)
+
+    def drag(self, event):
+        c = event.x // self.px
+        if c > self.width - 1:
+            c = self.width - 1
+        r = event.y // self.px
+        if r > self.height - 1:
+            r = self.height - 1
+        self.set_pixel(c, r, 1)
+
