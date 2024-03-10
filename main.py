@@ -164,8 +164,8 @@ class BitmapEditApp:
             height = int(h_entry.get())
             stride = int(s_entry.get())
             print("Values:", width, height, stride)
-            self.font_data = bytearray(self.bitmapTyp.size(width, height, stride))
-            self.bitmap = self.bitmapTyp(memoryview(self.font_data), width, height)
+            self.font_data = bytearray(self.bitmapType.size(width, height, stride))
+            self.bitmap = self.bitmapType(memoryview(self.font_data), width, height)
             self.index = 0
             self.update()
         except ValueError:

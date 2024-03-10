@@ -73,4 +73,3 @@ class BitmapEdit(ttk.Frame):
         if r > self.height - 1:
             r = self.height - 1
         self.set_pixel(c, r, 1)
-
