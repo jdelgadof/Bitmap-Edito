@@ -102,7 +102,10 @@ class BitmapEditApp:
                 # remove comments
                 text = line.split('/', 1)[0]
                 # print(text)
-                ba = bytearray.fromhex(text.replace('0x', '').replace(',', ''))
+                text = text.replace('0x', '')
+                text = text.replace('0X', '')
+                text = text.replace(',', ' ')
+                ba = bytearray.fromhex(text)
                 # print(text, ba.hex())
                 data.extend(ba)
             if line.find('// font edit begin') >= 0:
