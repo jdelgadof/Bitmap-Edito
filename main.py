@@ -21,6 +21,7 @@ class BitmapEditApp:
         self.index = 0
         self.popup = None
         self.root = root
+        self.type_selection = tk.StringVar(value='monovlsb')
         self.bitmapType = MonoVlsb
         mainframe = ttk.Frame(root, padding="3 3 12 12")
         mainframe.grid(column=0, row=0, sticky="NWES")
@@ -43,13 +44,16 @@ class BitmapEditApp:
         for child in mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
 
+        self.update()
+
     def update(self):
         self.bitmap.set_bitmap_data(memoryview(self.font_data)[self.index:self.index + self.bitmap.size])
         self.bme.set_bitmap(self.bitmap)
         self.label_text.set("Index: " + str(self.index // self.bitmap.size) +
                             "   Count: " + str(len(self.font_data) // self.bitmap.size) +
-                            "   Width: " + str(self.bitmap.width) +
-                            "   Height: " + str(self.bitmap.height))
+                            "   W: " + str(self.bitmap.width) +
+                            "   H: " + str(self.bitmap.height) +
+                            "   " + self.bitmap.name())
 
     def inc(self):
         if self.index < len(self.font_data) - self.bitmap.size:
@@ -115,12 +119,7 @@ class BitmapEditApp:
             if line.find('// font edit begin') >= 0:
                 values = line.split(':')
                 try:
-                    if values[1].strip() == "monohlsb":
-                        self.bitmapType = MonoHlsb
-                    elif values[1].strip() == "monohmsb":
-                        self.bitmapType = MonoHmsb
-                    else:
-                        self.bitmapType = MonoVlsb
+                    self.setTypeFromString(values[1].strip())
                     width = int(values[2])
                     height = int(values[3])
                     try:
@@ -143,6 +142,14 @@ class BitmapEditApp:
             print("Added", missing, "bytes to align buffer size")
         return data, width, height, stride
 
+    def setTypeFromString(self, value):
+        if value == "monohlsb":
+            self.bitmapType = MonoHlsb
+        elif value == "monohmsb":
+            self.bitmapType = MonoHmsb
+        else:
+            self.bitmapType = MonoVlsb
+
     def read_bitmap_file(self, filename):
         image = PIL.Image.open(filename).convert('1')
         data = bytearray(self.bitmapType.size(image.width, image.height))
@@ -163,7 +170,8 @@ class BitmapEditApp:
             width = int(w_entry.get())
             height = int(h_entry.get())
             stride = int(s_entry.get())
-            print("Values:", width, height, stride)
+            print("Values:", width, height, stride, self.type_selection.get())
+            self.setTypeFromString(self.type_selection.get())
             self.font_data = bytearray(self.bitmapType.size(width, height, stride))
             self.bitmap = self.bitmapType(memoryview(self.font_data), width, height)
             self.index = 0
@@ -198,11 +206,22 @@ class BitmapEditApp:
         s_entry.grid(row=1, column=2)
         s_entry.insert(0, "0")
 
-        # Create a Button to print something in the Entry widget
-        ttk.Button(mainframe, text="Cancel", command=self.popup.destroy).grid(row=2, column=1)
-        # Create a Button Widget in the Toplevel Window
+        ttk.Label(mainframe, text='Image type').grid(row=2, column=0, sticky="WE")
+        # Dictionary to create multiple buttons
+        values = {"Mono VLSB": 'monovlsb',
+                  "Mono HLSB": 'monohlsb',
+                  "Mono HMSB": 'monohmsb'}
+
+        # Loop is used to create multiple Radiobuttons
+        # rather than creating each button separately
+        bcol = 0
+        for (text, value) in values.items():
+            ttk.Radiobutton(mainframe, text=text, variable=self.type_selection, value=value).grid(row=3, column=bcol)
+            bcol += 1
+
+        ttk.Button(mainframe, text="Cancel", command=self.popup.destroy).grid(row=4, column=1)
         button = ttk.Button(mainframe, text="Ok", command=lambda: self.close_new_image_popup(w_entry, h_entry, s_entry))
-        button.grid(row=2, column=2)
+        button.grid(row=4, column=2)
 
     def save(self):
         prefix = ''
