@@ -3,6 +3,8 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 from bitmapedit import BitmapEdit
 from monovlsb import MonoVlsb
+from monohmsb import MonoHmsb
+from monohlsb import MonoHlsb
 
 PIL_is_installed = True
 
@@ -19,13 +21,14 @@ class BitmapEditApp:
         self.index = 0
         self.popup = None
         self.root = root
+        self.bitmapType = MonoVlsb
         mainframe = ttk.Frame(root, padding="3 3 12 12")
         mainframe.grid(column=0, row=0, sticky="NWES")
         root.columnconfigure(0, weight=1)
         root.rowconfigure(0, weight=1)
 
-        self.font_data = bytearray(MonoVlsb.size(8, 8))
-        self.bitmap = MonoVlsb(memoryview(self.font_data), 8, 8)
+        self.font_data = bytearray(self.bitmapType.size(8, 8))
+        self.bitmap = self.bitmapType(memoryview(self.font_data), 8, 8)
         self.bme = BitmapEdit(mainframe, self.bitmap, 20)
         self.bme.grid(row=1, column=1)
         self.filename = None
@@ -59,10 +62,10 @@ class BitmapEditApp:
             self.update()
 
     def file_open(self):
-        data, height, width, filename = self.read_data_from_file()
+        data, height, width, stride, filename = self.read_data_from_file()
         if data is not None:
             self.font_data = data
-            self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
+            self.bitmap = self.bitmapType(memoryview(self.font_data), width, height, stride)
             self.filename = filename
             self.index = 0
             self.update()
@@ -75,16 +78,16 @@ class BitmapEditApp:
             if not PIL_is_installed:
                 tk.messagebox.showwarning(title='PILLOW not installed',
                                           message='You need to install Pillow to open bitmap files.')
-                data, width, height = (None, 0, 0)
+                data, width, height, stride = (None, 0, 0, 0)
             else:
-                data, width, height = self.read_bitmap_file(filename)
+                data, width, height, stride = self.read_bitmap_file(filename)
             # filename = os.path.basename(os.path.splitext(filename)[0]) + '.h'
             # filename = os.path.splitext(filename)[0] + '.h'
             filename = None  # kludge until creating a new file with non-default name is fixed
         else:
-            data, width, height = self.read_source_file(filename)
+            data, width, height, stride = self.read_source_file(filename)
 
-        return data, height, width, filename
+        return data, height, width, stride, filename
 
     def read_source_file(self, filename):
         with open(filename, "r") as file:
@@ -92,6 +95,7 @@ class BitmapEditApp:
         output = False
         width = 8
         height = 8
+        stride = 0
         data = bytearray()
         for line in lines:
             # remove whitespace
@@ -111,24 +115,38 @@ class BitmapEditApp:
             if line.find('// font edit begin') >= 0:
                 values = line.split(':')
                 try:
+                    if values[1].strip() == "monohlsb":
+                        self.bitmapType = MonoHlsb
+                    elif values[1].strip() == "monohmsb":
+                        self.bitmapType = MonoHmsb
+                    else:
+                        self.bitmapType = MonoVlsb
                     width = int(values[2])
                     height = int(values[3])
+                    try:
+                        stride = int(values[4])
+                    except ValueError:
+                        print('Stride parse error')
+                    except IndexError:
+                        print('Stride not found')
                     output = True
                 except ValueError:
                     print('Parse error:', values)
         # print(data.hex(' '))
-        print('W:', width, 'H:', height)
-        byte_count = MonoVlsb.size(width, height)
-        if len(data) % byte_count != 0:
+        print('W:', width, 'H:', height, 'S:', stride)
+        # byte_count = MonoVlsb.size(width, height)
+        byte_count = self.bitmapType.size(width, height)
+        print(byte_count, len(data))
+        if len(data) < byte_count or len(data) % byte_count != 0:
             missing = ((len(data) // byte_count) + 1) * byte_count - len(data)
             data.extend(bytearray(missing))
             print("Added", missing, "bytes to align buffer size")
-        return data, width, height
+        return data, width, height, stride
 
     def read_bitmap_file(self, filename):
         image = PIL.Image.open(filename).convert('1')
-        data = bytearray(MonoVlsb.size(image.width, image.height))
-        bitmap = MonoVlsb(memoryview(data), image.width, image.height)
+        data = bytearray(self.bitmapType.size(image.width, image.height))
+        bitmap = self.bitmapType(memoryview(data), image.width, image.height)
         for x in range(image.width):
             for y in range(image.height):
                 px = image.getpixel((x, y))
@@ -136,7 +154,7 @@ class BitmapEditApp:
                 if px < 127:
                     bitmap.set_pixel(x, y, 1)
         image.close()
-        return data, bitmap.width, bitmap.height
+        return data, bitmap.width, bitmap.height, bitmap.stride
 
     # Define a function to close the popup window
     def close_new_image_popup(self, w_entry, h_entry, s_entry):
@@ -146,8 +164,8 @@ class BitmapEditApp:
             height = int(h_entry.get())
             stride = int(s_entry.get())
             print("Values:", width, height, stride)
-            self.font_data = bytearray(MonoVlsb.size(width, height, stride))
-            self.bitmap = MonoVlsb(memoryview(self.font_data), width, height)
+            self.font_data = bytearray(self.bitmapTyp.size(width, height, stride))
+            self.bitmap = self.bitmapTyp(memoryview(self.font_data), width, height)
             self.index = 0
             self.update()
         except ValueError:
@@ -191,9 +209,10 @@ class BitmapEditApp:
         postfix = ''
         if self.filename is None:
             prefix = 'const unsigned char binary_data[] = {\n'
-            prefix += '// font edit begin : monovlsb : ' + self.bitmap.width + ' : ' + str(self.bitmap.height)
+            prefix += ('// font edit begin : ' + self.bitmap.name() + ' : ' +
+                       self.bitmap.width + ' : ' + str(self.bitmap.height) + ' : ' + str(self.bitmap.stride))
             postfix = '// font edit end\n};\n'
-            self.filename = 'default_monovlsb.h'
+            self.filename = 'default_' + self.bitmap.name() + '.h'
         else:
             with open(self.filename, "r") as file:
                 lines = file.readlines()
@@ -222,7 +241,7 @@ class BitmapEditApp:
             f.write(postfix)
 
     def append(self):
-        data, height, width, filename = self.read_data_from_file()
+        data, height, width, stride, filename = self.read_data_from_file()
         if data is not None and height == self.bitmap.height and width == self.bitmap.width:
             self.bitmap.set_bitmap_data(None)  # remove export of current data
             self.font_data.extend(data)  # extend data

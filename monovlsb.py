@@ -12,6 +12,9 @@ class MonoVlsb:
         self.size = MonoVlsb.size(width, height, self.stride)
         self.data = data
 
+    def name(self):
+        return "monovlsb"
+
     def set_bitmap_data(self, data):
         self.data = data
 
