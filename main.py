@@ -33,6 +33,8 @@ class BitmapEditApp:
         self.bme = BitmapEdit(mainframe, self.bitmap, 20)
         self.bme.grid(row=1, column=1)
         self.filename = None
+        self.prefix = ''
+        self.suffix = ''
 
         self.label_text = tk.StringVar(value="Index: " + str(self.index))
         self.label = ttk.Label(mainframe, textvariable=self.label_text)
@@ -66,7 +68,7 @@ class BitmapEditApp:
             self.update()
 
     def file_open(self):
-        data, height, width, stride, filename = self.read_data_from_file()
+        data, height, width, stride, filename = self.read_data_from_file(False)
         if data is not None:
             self.font_data = data
             self.bitmap = self.bitmapType(memoryview(self.font_data), width, height, stride)
@@ -74,7 +76,7 @@ class BitmapEditApp:
             self.index = 0
             self.update()
 
-    def read_data_from_file(self):
+    def read_data_from_file(self, append):
         filename = tk.filedialog.askopenfilename()
         print(os.path.splitext(filename), os.path.basename(filename))
         extension = os.path.splitext(filename)[1]
@@ -89,13 +91,16 @@ class BitmapEditApp:
             # filename = os.path.splitext(filename)[0] + '.h'
             filename = None  # kludge until creating a new file with non-default name is fixed
         else:
-            data, width, height, stride = self.read_source_file(filename)
+            data, width, height, stride = self.read_source_file(filename, append)
 
         return data, height, width, stride, filename
 
-    def read_source_file(self, filename):
+    def read_source_file(self, filename, read_only_hex = False):
         with open(filename, "r") as file:
             lines = file.readlines()
+        if not read_only_hex:
+            self.get_prefix_suffix(lines)
+
         output = False
         width = 8
         height = 8
@@ -142,6 +147,20 @@ class BitmapEditApp:
             print("Added", missing, "bytes to align buffer size")
         return data, width, height, stride
 
+    def get_prefix_suffix(self, lines):
+        self.prefix = ''
+        self.suffix = ''
+        for line in lines:
+            self.prefix += line
+            if line.find('// font edit begin') >= 0:
+                break
+        append = False
+        for line in lines:
+            if line.find('// font edit end') >= 0:
+                append = True
+            if append:
+                self.suffix += line
+
     def setTypeFromString(self, value):
         if value == "monohlsb":
             self.bitmapType = MonoHlsb
@@ -172,6 +191,8 @@ class BitmapEditApp:
             stride = int(s_entry.get())
             print("Values:", width, height, stride, self.type_selection.get())
             self.filename = None
+            self.prefix = ''
+            self.suffix = ''
             self.setTypeFromString(self.type_selection.get())
             self.font_data = bytearray(self.bitmapType.size(width, height, stride))
             self.bitmap = self.bitmapType(memoryview(self.font_data), width, height)
@@ -225,43 +246,62 @@ class BitmapEditApp:
         button.grid(row=4, column=2)
 
     def save(self):
-        prefix = ''
-        postfix = ''
         if self.filename is None:
-            prefix = 'const unsigned char binary_data[] = {\n'
-            prefix += ('// font edit begin : ' + self.bitmap.name() + ' : ' +
-                       str(self.bitmap.width) + ' : ' + str(self.bitmap.height) + ' : ' + str(self.bitmap.stride))
-            postfix = '// font edit end\n};\n'
-            self.filename = 'default_' + self.bitmap.name() + '.h'
-        else:
-            with open(self.filename, "r") as file:
-                lines = file.readlines()
-            for line in lines:
-                prefix += line
-                if line.find('// font edit begin') >= 0:
-                    break
-            append = False
-            for line in lines:
-                if line.find('// font edit end') >= 0:
-                    append = True
-                if append:
-                    postfix += line
-            prefix = prefix.strip()  # output will add line feed so strip white space from the end
-
+            self.prepare_c_header()
+        print('Writing to:', self.filename)
         with open(self.filename, 'w', encoding='ISO8859-1') as f:
-            f.write(prefix)
+            f.write(self.prefix)
 
             for i in range(len(self.font_data) - 1):
                 if i % 8 == 0:
-                    f.write('\n    ')
+                    if i != 0:
+                        f.write('\n')
+                    f.write('    ')
                 f.write("0x%0.2X" % self.font_data[i] + ', ')
             f.write("0x%0.2X" % self.font_data[-1])
             f.write('\n')
 
-            f.write(postfix)
+            f.write(self.suffix)
+
+    def prepare_c_header(self):
+        self.prefix = 'const unsigned char binary_data[] = {\n'
+        self.prefix += ('    // font edit begin : ' + self.bitmap.name() + ' : ' +
+                        str(self.bitmap.width) + ' : ' + str(self.bitmap.height) + ' : ' + str(
+                    self.bitmap.stride) + '\n')
+        self.suffix = '    // font edit end\n};\n'
+        self.filename = 'default_' + self.bitmap.name() + '.h'
+
+    def prepare_python_source(self):
+        self.prefix = 'img = bytearray( [\n'
+        self.prefix += ('    #// font edit begin : ' + self.bitmap.name() + ' : ' +
+                        str(self.bitmap.width) + ' : ' + str(self.bitmap.height) + ' : ' + str(
+                    self.bitmap.stride) + '\n')
+        self.suffix = '    #// font edit end\n    ])\n'
+        self.filename = 'default_' + self.bitmap.name() + '.py'
+
+    def saveas(self):
+        filename = tk.filedialog.asksaveasfilename(
+            initialfile = 'Untitled.h',
+            defaultextension=".h",
+            filetypes=[("All Files","*.*"),
+                       ("Python sources","*.py"),
+                       ("C/C++ header","*.h"),
+                       ("C/C++ source","*.c")])
+
+        if len(filename) > 0:
+            print("SaveAs:", filename)
+            extension = os.path.splitext(filename)[1]
+            if extension == '.py':
+                self.prepare_python_source()
+            else:
+                self.prepare_c_header()
+            self.filename = filename
+            self.save()
+        else:
+            print("No filename")
 
     def append(self):
-        data, height, width, stride, filename = self.read_data_from_file()
+        data, height, width, stride, filename = self.read_data_from_file(True)
         if data is not None and height == self.bitmap.height and width == self.bitmap.width:
             self.bitmap.set_bitmap_data(None)  # remove export of current data
             self.font_data.extend(data)  # extend data
@@ -289,6 +329,7 @@ def run():
     filemenu.add_command(label="Open", command=bme.file_open)
     filemenu.add_command(label="Append", command=bme.append)
     filemenu.add_command(label="Save", command=bme.save)
+    filemenu.add_command(label="Save As", command=bme.saveas)
     filemenu.add_separator()
     filemenu.add_command(label="Exit", command=root.quit)
     menubar.add_cascade(label="File", menu=filemenu)
