@@ -171,6 +171,7 @@ class BitmapEditApp:
             height = int(h_entry.get())
             stride = int(s_entry.get())
             print("Values:", width, height, stride, self.type_selection.get())
+            self.filename = None
             self.setTypeFromString(self.type_selection.get())
             self.font_data = bytearray(self.bitmapType.size(width, height, stride))
             self.bitmap = self.bitmapType(memoryview(self.font_data), width, height)
@@ -229,7 +230,7 @@ class BitmapEditApp:
         if self.filename is None:
             prefix = 'const unsigned char binary_data[] = {\n'
             prefix += ('// font edit begin : ' + self.bitmap.name() + ' : ' +
-                       self.bitmap.width + ' : ' + str(self.bitmap.height) + ' : ' + str(self.bitmap.stride))
+                       str(self.bitmap.width) + ' : ' + str(self.bitmap.height) + ' : ' + str(self.bitmap.stride))
             postfix = '// font edit end\n};\n'
             self.filename = 'default_' + self.bitmap.name() + '.h'
         else:
