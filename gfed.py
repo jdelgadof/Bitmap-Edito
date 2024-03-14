@@ -264,7 +264,7 @@ class BitmapEditApp:
             f.write(self.suffix)
 
     def prepare_c_header(self):
-        self.prefix = 'const unsigned char binary_data[] = {\n'
+        self.prefix = 'static const unsigned char binary_data[] = {\n'
         self.prefix += ('    // font edit begin : ' + self.bitmap.name() + ' : ' +
                         str(self.bitmap.width) + ' : ' + str(self.bitmap.height) + ' : ' + str(
                     self.bitmap.stride) + '\n')
@@ -285,8 +285,7 @@ class BitmapEditApp:
             defaultextension=".h",
             filetypes=[("All Files","*.*"),
                        ("Python sources","*.py"),
-                       ("C/C++ header","*.h"),
-                       ("C/C++ source","*.c")])
+                       ("C/C++ header","*.h")])
 
         if len(filename) > 0:
             print("SaveAs:", filename)
