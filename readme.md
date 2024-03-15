@@ -4,7 +4,7 @@ Primary target RPI Pico and images/fonts are saved as header files
 containing uint8_t array of bytes. Header file must contain two 
 special comments to mark the beginning and end of byte array data.
 
-The main file of the program in gfed.py. Program takes no parameters.
+The main file of the program in __gfed.py__. Program takes no parameters.
 
 Source file can be in any language as long as the special comments shown below are found in the file. 
 If the language does not support C/C++ style comments precede the line (including C/C++ style comment) 
