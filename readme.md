@@ -4,15 +4,21 @@ Primary target RPI Pico and images/fonts are saved as header files
 containing uint8_t array of bytes. Header file must contain two 
 special comments to mark the beginning and end of byte array data.
 
+The main file of the program in gfed.py. Program takes no parameters.
+
 Source file can be in any language as long as the special comments shown below are found in the file. 
 If the language does not support C/C++ style comments precede the line (including C/C++ style comment) 
 with a supported comment marker. For example, # in Python. 
 
 To mark beginning use:
 
-    // font edit begin : monovlsb : 20 : 20
+    // font edit begin : monovlsb : 20 : 20 : 20 
 
-The parameters after the first colon specify the format of the bitmap. At the moment only monovlsb-format is supported. The two numbers after the format are width and height of the bitmap in pixels.
+The parameters after the first colon specify the format of the bitmap. At the moment only monovlsb-format 
+is supported. The two numbers after the format are width and height of the bitmap in pixels. The third 
+number is optional. Stride specifies the number of pixels in the bitmap per row. Usually the number is 
+same or close to the width of the bitmap. It is omitted then width of the bitmap is used as stride. 
+In monovlsb type width and stride should be equal.
 
 
     const unsigned char binary_data[] = {
